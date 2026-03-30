@@ -21,6 +21,14 @@ if [ -f $ENV_DIR/PROJECT_PATH ]; then
 		if [ -d $BUILD_DIR/common ]; then
 			echo "       copying common/ into $PROJECT_PATH/"
 			cp -R $BUILD_DIR/common $BUILD_DIR/$PROJECT_PATH/
+
+			# Update tsconfig.json references to point to the local common copy
+			TSCONFIG_PATH="$BUILD_DIR/$PROJECT_PATH/extensions/appizy-bundle/tsconfig.json"
+			if [ -f "$TSCONFIG_PATH" ]; then
+				echo "       updating tsconfig.json to reference local common/"
+				sed -i.bak 's|"path": "../../../common"|"path": "../../common"|g' "$TSCONFIG_PATH"
+				rm -f "$TSCONFIG_PATH.bak"
+			fi
 		fi
 
 		echo "       moving working dir: $PROJECT_PATH to $TMP_DIR"
