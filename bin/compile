@@ -11,32 +11,49 @@ ENV_DIR=${3:-}
 if [ -f $ENV_DIR/PROJECT_PATH ]; then
 	PROJECT_PATH=`cat $ENV_DIR/PROJECT_PATH`
 	if [ -d $BUILD_DIR/$PROJECT_PATH ]; then
-		echo "-----> Subdir buildpack in $PROJECT_PATH"
+		echo "-----> Subdir buildpack in $PROJECT_PATH (with common/ support)"
 		echo "       creating cache: $CACHE_DIR"
 		mkdir -p $CACHE_DIR
 		TMP_DIR=`mktemp -d $CACHE_DIR/subdirXXXXX`
 		echo "       created tmp dir: $TMP_DIR"
 
-		# Copy common directory into project if it exists
-		if [ -d $BUILD_DIR/common ]; then
-			echo "       copying common/ into $PROJECT_PATH/"
-			cp -R $BUILD_DIR/common $BUILD_DIR/$PROJECT_PATH/
+		# Create parent directory structure in temp
+		mkdir -p $TMP_DIR/$PROJECT_PATH
 
-			# Update tsconfig.json references to point to the local common copy
-			TSCONFIG_PATH="$BUILD_DIR/$PROJECT_PATH/extensions/appizy-bundle/tsconfig.json"
-			if [ -f "$TSCONFIG_PATH" ]; then
-				echo "       updating tsconfig.json to reference local common/"
-				sed -i.bak 's|"path": "../../../common"|"path": "../../common"|g' "$TSCONFIG_PATH"
-				rm -f "$TSCONFIG_PATH.bak"
-			fi
+		# Copy PROJECT_PATH to maintain structure
+		echo "       copying $PROJECT_PATH/"
+		cp -R $BUILD_DIR/$PROJECT_PATH/. $TMP_DIR/$PROJECT_PATH/
+
+		# Copy common directory if it exists
+		if [ -d $BUILD_DIR/common ]; then
+			echo "       copying common/"
+			cp -R $BUILD_DIR/common $TMP_DIR/common
 		fi
 
-		echo "       moving working dir: $PROJECT_PATH to $TMP_DIR"
-		cp -R $BUILD_DIR/$PROJECT_PATH/. $TMP_DIR/
 	 	echo "       cleaning build dir $BUILD_DIR"
 		rm -rf $BUILD_DIR/*
-		echo "       copying preserved work dir from cache $TMP_DIR to build dir $BUILD_DIR"
+
+		echo "       restoring directory structure"
 		cp -R $TMP_DIR/. $BUILD_DIR/
+
+		# Create root package.json that delegates to PROJECT_PATH
+		echo "       creating root package.json wrapper"
+		cat > $BUILD_DIR/package.json <<EOF
+{
+  "name": "monorepo-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "cd $PROJECT_PATH && npm install && cd extensions/appizy-bundle && npm install",
+    "start": "cd $PROJECT_PATH && npm start",
+    "heroku-postbuild": "cd $PROJECT_PATH && npm run heroku-postbuild"
+  },
+  "engines": {
+    "node": ">=22 <23.0.0"
+  }
+}
+EOF
+
 		echo "       cleaning tmp dir $TMP_DIR"
 		rm -rf $TMP_DIR
 		exit 0
