@@ -45,7 +45,7 @@ if [ -f $ENV_DIR/PROJECT_PATH ]; then
   "private": true,
   "scripts": {
     "postinstall": "cd $PROJECT_PATH && npm install && cd extensions/appizy-bundle && npm install",
-    "start": "cd $PROJECT_PATH && npm start",
+    "start": "cd $PROJECT_PATH && DB_CONNECTION_STRING=$DATABASE_URL npx directus start",
     "heroku-postbuild": "cd $PROJECT_PATH && npm run heroku-postbuild"
   },
   "engines": {
