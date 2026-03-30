@@ -16,6 +16,13 @@ if [ -f $ENV_DIR/PROJECT_PATH ]; then
 		mkdir -p $CACHE_DIR
 		TMP_DIR=`mktemp -d $CACHE_DIR/subdirXXXXX`
 		echo "       created tmp dir: $TMP_DIR"
+
+		# Copy common directory into project if it exists
+		if [ -d $BUILD_DIR/common ]; then
+			echo "       copying common/ into $PROJECT_PATH/"
+			cp -R $BUILD_DIR/common $BUILD_DIR/$PROJECT_PATH/
+		fi
+
 		echo "       moving working dir: $PROJECT_PATH to $TMP_DIR"
 		cp -R $BUILD_DIR/$PROJECT_PATH/. $TMP_DIR/
 	 	echo "       cleaning build dir $BUILD_DIR"
